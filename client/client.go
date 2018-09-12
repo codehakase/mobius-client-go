@@ -21,16 +21,15 @@ var (
 // Client is the entrypoint for the sdk.
 type Client struct {
 	MobiusHost         string
-	StrictInterval     int
-	ChallengeExpiresIn int
+	StrictInterval     int64
+	ChallengeExpiresIn int64
 	AssetCode          string
 	HorizonClient      *horizon.Client
 	Network            *build.Network
 	StellarAsset       build.Asset
 }
 
-// NewClient creates a new client with the defaults settings from sdk's
-// design
+// NewClient creates a new mobius client with the defaults settings
 func NewClient() *Client {
 	client := &Client{
 		MobiusHost:         "https://mobius.network",
@@ -53,7 +52,7 @@ func (c *Client) GetAssetIssuer() string {
 
 // GetChallengeExpiration returns the challenge expiration value in seconds
 // (defaults to 1 day)
-func (c *Client) GetChallengeExpiration() int {
+func (c *Client) GetChallengeExpiration() int64 {
 	return c.ChallengeExpiresIn
 }
 
