@@ -52,14 +52,27 @@ func (a *Account) Authorized(kp keypair.KP) bool {
 }
 
 // Balance returns the balance for given asset
-func (a *Account) Balance(asset build.Asset) float64 {
-	balance, _ := strconv.ParseFloat(a.findBalance(asset).Balance, 64)
+func (a *Account) Balance(asset ...build.Asset) float64 {
+	var at build.Asset
+	if len(asset) < 1 {
+		at = mc.NewClient().GetStellarAsset()
+	} else {
+		at = asset[0]
+	}
+
+	balance, _ := strconv.ParseFloat(a.findBalance(at).Balance, 64)
 	return balance
 }
 
 // TrustLineExists returns true if a trustline exist for given asset, and limit is possitive
-func (a *Account) TrustLineExists(asset build.Asset) bool {
-	limit, _ := strconv.ParseFloat(a.findBalance(asset).Limit, 64)
+func (a *Account) TrustLineExists(asset ...build.Asset) bool {
+	var at build.Asset
+	if len(asset) < 1 {
+		at = mc.NewClient().GetStellarAsset()
+	} else {
+		at = asset[0]
+	}
+	limit, _ := strconv.ParseFloat(a.findBalance(at).Limit, 64)
 	return (limit > 0)
 }
 
