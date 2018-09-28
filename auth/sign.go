@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"crypto/sha256"
 	"log"
 
 	"github.com/stellar/go/build"
@@ -19,18 +18,14 @@ func (s *Sign) Call(userSecret, xdrs, address string) string {
 	if err != nil {
 		log.Fatalf("failed to scan challenge transaction xdr, err: %v", err)
 	}
-	kphash := sha256.Sum256([]byte(userSecret))
-	kp, err := keypair.FromRawSeed(kphash)
-	if err != nil {
-		log.Fatalf("failed to create keypair from user secret key, err: %v", err)
-	}
+	kp := kpFromSeed(userSecret)
 	devKeypair, err := keypair.Parse(address)
 	if err != nil {
 		log.Fatalf("failed to parse dev key pair, err: %v", err)
 	}
 	txt := build.TransactionBuilder{TX: &tx.Tx}
 	_ = s.validate(devKeypair, tx, txt)
-	txe, err := txt.Sign(kp.Address())
+	txe, err := txt.Sign(kp.Seed())
 	if err != nil {
 		log.Fatalf("failed to sign challenge transaction, err: %v", err)
 	}

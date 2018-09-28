@@ -1,6 +1,7 @@
 package app
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"strconv"
@@ -22,7 +23,7 @@ type App struct {
 // Build fetches information from the Stellar Network, and returns an instance
 // of a connected DApp
 func Build(developerSecret, address string) (*App, error) {
-	devKeypair, err := keypair.Parse(developerSecret)
+	devKeypair, err := kpFromSeed(developerSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +31,7 @@ func Build(developerSecret, address string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	userKeypair, err := keypair.Parse(address)
+	userKeypair, err := kpFromSeed(address)
 	if err != nil {
 		return nil, err
 	}
@@ -72,10 +73,10 @@ func (a *App) UserBalance() float64 {
 }
 
 // AppKeypair returns keypair associated with app account
-func (a *App) AppKeypair() keypair.KP { return a.AppAccount.GetKeypair() }
+func (a *App) AppKeypair() *keypair.Full { return a.AppAccount.GetKeypair() }
 
 // UserKeypair returns keypair associated with connected user
-func (a *App) UserKeypair() keypair.KP { return a.UserAccount.GetKeypair() }
+func (a *App) UserKeypair() *keypair.Full { return a.UserAccount.GetKeypair() }
 
 // Charge charges specified amount from user account and then optionally
 // transfers it from app account to a thrid party in same transaction
@@ -126,7 +127,7 @@ func (a *App) submitTx(paymentOps build.PaymentBuilder) (horizon.TransactionSucc
 		return hts, fmt.Errorf("failed to build transaction, err: %v", err)
 	}
 	// sign transaction
-	txe, err := tx.Sign(a.AppKeypair().Address())
+	txe, err := tx.Sign(a.AppKeypair().Seed())
 	if err != nil {
 		return hts, fmt.Errorf("failed to sign transaction, err: %v", err)
 	}
@@ -153,4 +154,13 @@ func (a *App) appPaymentOp(amount float64, destination string) build.PaymentBuil
 		build.NativeAmount{Amount: strconv.FormatFloat(amount, 'g', -1, 64)},
 		build.SourceAccount{AddressOrSeed: a.AppKeypair().Address()},
 	)
+}
+
+func kpFromSeed(seed string) (*keypair.Full, error) {
+	keypairHash := sha256.Sum256([]byte(seed))
+	kp, err := keypair.FromRawSeed(keypairHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create keypair from developer secret key, err: %v", err)
+	}
+	return kp, nil
 }

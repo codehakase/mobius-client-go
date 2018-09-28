@@ -22,11 +22,7 @@ type Challenge struct{}
 
 // Call generates a challenge transaction signed by the developer's private key
 func (c *Challenge) Call(devSecret string, expersIn int) string {
-	keypairHash := sha256.Sum256([]byte(devSecret))
-	kp, err := keypair.FromRawSeed(keypairHash)
-	if err != nil {
-		log.Fatalf("failed to create keypair from developer secret key, err: %v", err)
-	}
+	kp := kpFromSeed(devSecret)
 	randomKp, _ := keypair.Random()
 	tx, err := build.Transaction(
 		build.Payment(
@@ -66,4 +62,13 @@ func (c *Challenge) buildTimeBounds(exp int64) build.Timebounds {
 		MinTime: uint64(math.Floor(float64(time.Now().UnixNano() / 1000))),
 		MaxTime: uint64(math.Floor(float64(time.Now().UnixNano()/1000 + exp))),
 	}
+}
+
+func kpFromSeed(seed string) *keypair.Full {
+	keypairHash := sha256.Sum256([]byte(seed))
+	kp, err := keypair.FromRawSeed(keypairHash)
+	if err != nil {
+		log.Fatalf("failed to create keypair from developer secret key, err: %v", err)
+	}
+	return kp
 }

@@ -10,7 +10,7 @@ import (
 // CreateTrustline reprents a model for creating multiple trustline for a given asset
 type CreateTrustline struct{}
 
-func (ct *CreateTrustline) Call(kp keypair.KP, asset build.Asset) (horizon.TransactionSuccess, error) {
+func (ct *CreateTrustline) Call(kp *keypair.Full, asset build.Asset) (horizon.TransactionSuccess, error) {
 	var ts horizon.TransactionSuccess
 	client := mc.NewClient().HorizonClient
 	account, err := Build(kp)
@@ -20,7 +20,7 @@ func (ct *CreateTrustline) Call(kp keypair.KP, asset build.Asset) (horizon.Trans
 		return ts, err
 	}
 	// sign transaciton
-	txe, err := tx.Sign(account.Keypair.Address())
+	txe, err := tx.Sign(account.Keypair.Seed())
 	if err != nil {
 		return ts, err
 	}
