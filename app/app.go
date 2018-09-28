@@ -120,8 +120,6 @@ func (a *App) Transfer(amount float64, destination string) (horizon.TransactionS
 func (a *App) submitTx(paymentOps build.PaymentBuilder) (horizon.TransactionSuccess, error) {
 	var hts horizon.TransactionSuccess
 	tx, err := build.Transaction(
-		build.SourceAccount{AddressOrSeed: a.UserKeypair().Address()},
-		build.Sequence{Sequence: 1},
 		paymentOps,
 	)
 	if err != nil {
@@ -144,6 +142,7 @@ func (a *App) userPaymentOp(amount float64, destination string) build.PaymentBui
 	return build.Payment(
 		build.Destination{AddressOrSeed: destination},
 		build.NativeAmount{Amount: strconv.FormatFloat(amount, 'g', -1, 64)},
+		build.SourceAccount{AddressOrSeed: a.UserKeypair().Address()},
 	)
 }
 
@@ -152,5 +151,6 @@ func (a *App) appPaymentOp(amount float64, destination string) build.PaymentBuil
 	return build.Payment(
 		build.Destination{AddressOrSeed: destination},
 		build.NativeAmount{Amount: strconv.FormatFloat(amount, 'g', -1, 64)},
+		build.SourceAccount{AddressOrSeed: a.AppKeypair().Address()},
 	)
 }
