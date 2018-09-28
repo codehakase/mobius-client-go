@@ -16,6 +16,7 @@ var (
 		"PUBLIC":  "https://horizon.stellar.org",
 		"TESTNET": "https://horizon-testnet.stellar.org",
 	}
+	ChallengeExpiresIn int64 = 60 * 60 * 24
 )
 
 // Client is the entrypoint for the sdk.
