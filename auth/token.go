@@ -24,9 +24,9 @@ type Token struct {
 	userKeypair     *keypair.Full
 }
 
-// New creates a new token handler with provided developer seed, xdr and user
+// NewToken creates a new token handler with provided developer seed, xdr and user
 // address
-func New(devSecret, xdrs, address string) (*Token, error) {
+func NewToken(devSecret, xdrs, address string) (*Token, error) {
 	tx := &xdr.TransactionEnvelope{}
 	err := tx.Scan(xdrs)
 	if err != nil {
