@@ -1,13 +1,13 @@
 package app
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"log"
 	"strconv"
 
 	"github.com/codehakase/mobius-client-go/blockchain"
 	mc "github.com/codehakase/mobius-client-go/client"
+	"github.com/codehakase/mobius-client-go/utils"
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
 	"github.com/stellar/go/keypair"
@@ -23,7 +23,7 @@ type App struct {
 // Build fetches information from the Stellar Network, and returns an instance
 // of a connected DApp
 func Build(developerSecret, address string) (*App, error) {
-	devKeypair, err := kpFromSeed(developerSecret)
+	devKeypair, err := utils.KPFromSeed(developerSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func Build(developerSecret, address string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	userKeypair, err := kpFromSeed(address)
+	userKeypair, err := utils.KPFromSeed(address)
 	if err != nil {
 		return nil, err
 	}
@@ -154,13 +154,4 @@ func (a *App) appPaymentOp(amount float64, destination string) build.PaymentBuil
 		build.NativeAmount{Amount: strconv.FormatFloat(amount, 'g', -1, 64)},
 		build.SourceAccount{AddressOrSeed: a.AppKeypair().Address()},
 	)
-}
-
-func kpFromSeed(seed string) (*keypair.Full, error) {
-	keypairHash := sha256.Sum256([]byte(seed))
-	kp, err := keypair.FromRawSeed(keypairHash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create keypair from developer secret key, err: %v", err)
-	}
-	return kp, nil
 }

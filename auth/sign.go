@@ -3,6 +3,7 @@ package auth
 import (
 	"log"
 
+	"github.com/codehakase/mobius-client-go/utils"
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/xdr"
@@ -18,12 +19,12 @@ func (s *Sign) Call(userSecret, xdrs, address string) string {
 	if err != nil {
 		log.Fatalf("failed to scan challenge transaction xdr, err: %v", err)
 	}
-	kp := kpFromSeed(userSecret)
-	devKeypair, err := keypair.Parse(address)
+	kp := utils.KPFromSeed(userSecret)
+	devKeypair := utils.KPFromAddress(address)
 	if err != nil {
 		log.Fatalf("failed to parse dev key pair, err: %v", err)
 	}
-	txt := build.TransactionBuilder{TX: &tx.Tx}
+	txt := &build.TransactionBuilder{TX: &tx.Tx}
 	_ = s.validate(devKeypair, tx, txt)
 	txe, err := txt.Sign(kp.Seed())
 	if err != nil {
@@ -36,7 +37,7 @@ func (s *Sign) Call(userSecret, xdrs, address string) string {
 	return txtEnvelopeStr
 }
 
-func (s *Sign) validate(devKeypair keypair.KP, tx *xdr.TransactionEnvelope, t build.TransactionBuilder) bool {
+func (s *Sign) validate(devKeypair *keypair.Full, tx *xdr.TransactionEnvelope, t *build.TransactionBuilder) bool {
 	if tx.Signatures == nil || len(tx.Signatures) < 1 {
 		return false
 	}
