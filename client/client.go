@@ -17,6 +17,7 @@ var (
 		"TESTNET": "https://horizon-testnet.stellar.org",
 	}
 	ChallengeExpiresIn int64 = 60 * 60 * 24
+	StrictInterval     int64 = 10
 )
 
 // Client is the entrypoint for the sdk.
