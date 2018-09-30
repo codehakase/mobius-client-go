@@ -136,9 +136,9 @@ the app as a signer so it can withdraw MOBI from it.
 
 $ git clone https://github.com/codehakase/mobius-client-go.git $GOPATH/src/github.com/codehakase/mobius-client-go && cd $_
 
-# Install dependencies
+# Install dependencies (using go dep) http://github.com/golang/dep
 
-$ go get ./...
+$ dep ensure -v
 
 # Run authentication example
 
