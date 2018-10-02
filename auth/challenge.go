@@ -4,16 +4,24 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"os"
 	"time"
 
 	mc "github.com/codehakase/mobius-client-go/client"
 	"github.com/codehakase/mobius-client-go/utils"
 	"github.com/stellar/go/build"
-	"github.com/stellar/go/keypair"
+	"github.com/stellar/go/network"
 )
+
+var Network build.Network
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+	if os.Getenv("MOBIUS_NETWORK") == "" {
+		Network = build.Network{network.TestNetworkPassphrase}
+	} else {
+		Network = build.Network{network.PublicNetworkPassphrase}
+	}
 }
 
 // Challenge represents a model which generates challenge transactions on
@@ -21,21 +29,27 @@ func init() {
 type Challenge struct{}
 
 // Call generates a challenge transaction signed by the developer's private key
-func (c *Challenge) Call(devSecret string, expersIn int) string {
+func (c *Challenge) Call(devSecret string, expiresIn int64) string {
+	if expiresIn < 1 {
+		expiresIn = mc.ChallengeExpiresIn
+	}
 	kp := utils.KPFromSeed(devSecret)
-	randomKp, _ := keypair.Random()
+	// randomKp, _ := keypair.Random()
 	tx, err := build.Transaction(
+		build.SourceAccount{AddressOrSeed: kp.Seed()},
+		build.Sequence{Sequence: c.randomSequence()},
+		Network,
+		c.memo(),
+		c.buildTimeBounds(expiresIn),
 		build.Payment(
-			build.SourceAccount{AddressOrSeed: randomKp.Address()},
-			build.Destination{AddressOrSeed: kp.Address()},
-			build.Sequence{Sequence: c.randomSequence()},
+			build.Destination{AddressOrSeed: kp.Seed()},
 			build.NativeAmount{Amount: "0.000001"},
 		),
 	)
 	if err != nil {
 		log.Fatalf("failed to build challenge transaction, err: %v", err)
 	}
-	txe, err := tx.Sign(kp.Address())
+	txe, err := tx.Sign(kp.Seed())
 	if err != nil {
 		log.Fatalf("failed to sign challenge transaction, err: %v", err)
 	}
