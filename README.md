@@ -67,19 +67,25 @@ import (
 	"net/http"
 	"encoding/json"
 
-	MobiusClient "github.com/codehakase/mobius-client-go"
+	MobiusAuth "github.com/codehakase/mobius-client-go/auth"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 )
+var  APPLICATION_SECRET_KEY string
+
+func init() {
+	os.Getenv("APPLICATION_SECRET_KEY")
+}
+
 func main() {
 	r := mux.NewRouter()
 	// GET /auth
 	// Generates and returns challenge transaction XDR signed by application to user
 	r.HandleFunc("/auth", func (w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json;charset=utf-8")
-		chl := &MobiusClient.Auth.Challenge{}
+		chl := &MobiusAuth.Challenge{}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte((chl.Call(APPLICATION_SECRET_KEY, 0)))
+		w.Write([]byte((chl.Call(APPLICATION_SECRET_KEY, 0))))
 	}).Methods("GET")
 
 	// POST /auth
@@ -93,11 +99,11 @@ func main() {
 	r.HandleFunc("/auth", func (w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json;charset=utf-8")
 		var chreq challengeReq
-		_ := json.NewDecoder(r.Body).Decode(&chreq) // handle errors
-		token, err := MobiusClient.Auth.NewToken(
-			APPLICATION_SECRET,
+		_ = json.NewDecoder(r.Body).Decode(&chreq) // handle errors
+		token, err := MobiusAuth.NewToken(
+			APPLICATION_SECRET_KEY,
 			chreq.xdr,
-			chreq.publicKey	
+			chreq.publicKey,
 		)
 		if err != nil {
 			http.Error(w, err, 500)
@@ -105,7 +111,7 @@ func main() {
 		// Important! Otherwise, token will be considered valid
 		_ = token.Validate(true)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(token.Hash("hex")))
+		w.Write([]byte(token.Hash("hex").([]byte)))
 	}).Methods("POST")
 
 	c := cors.New(cors.Options{
@@ -119,6 +125,7 @@ func main() {
 }
 ```
 
+> More examples can be found in the `examples` directory
 ## Payment
 
 ### Explanation
