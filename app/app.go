@@ -23,18 +23,12 @@ type App struct {
 // Build fetches information from the Stellar Network, and returns an instance
 // of a connected DApp
 func Build(developerSecret, address string) (*App, error) {
-	devKeypair, err := utils.KPFromSeed(developerSecret)
-	if err != nil {
-		return nil, err
-	}
+	devKeypair := utils.KPFromSeed(developerSecret)
 	devAccount, err := blockchain.Build(devKeypair)
 	if err != nil {
 		return nil, err
 	}
-	userKeypair, err := utils.KPFromSeed(address)
-	if err != nil {
-		return nil, err
-	}
+	userKeypair := utils.KPFromSeed(address)
 	userAccount, err := blockchain.Build(userKeypair)
 	if err != nil {
 		return nil, err
