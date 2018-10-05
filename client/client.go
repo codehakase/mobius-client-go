@@ -1,4 +1,4 @@
-package mobius
+package client
 
 import (
 	"github.com/stellar/go/build"
