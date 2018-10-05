@@ -19,7 +19,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 	if os.Getenv("MOBIUS_NETWORK") == "" {
 		Network = build.Network{network.TestNetworkPassphrase}
-	} else {
+	} else if os.Getenv("MOBIUS_NETWORK") == "public" {
 		Network = build.Network{network.PublicNetworkPassphrase}
 	}
 }
