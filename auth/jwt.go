@@ -13,19 +13,19 @@ type JWT struct{ Secret string }
 
 // Encode a Mobius auth token as a JSON Web token
 func (j *JWT) Encode(t *Token, options map[string]interface{}) string {
-	var claims jwt.MapClaims
+	iat, _ := strconv.ParseInt(strconv.Itoa(int(t.TX.Tx.Tx.TimeBounds.MinTime)), 10, 64)
+	exp, _ := strconv.ParseInt(strconv.Itoa(int(t.TX.Tx.Tx.TimeBounds.MaxTime)), 10, 64)
+	token := jwt.New(jwt.SigningMethodHS512)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["jti"] = t.Hash("hex")
+	claims["sub"] = t.GetAddress()
+	claims["iat"] = iat
+	claims["exp"] = exp
 	if options != nil {
 		for i, v := range options {
 			claims[i] = v
 		}
 	}
-	iat, _ := strconv.ParseInt(string(t.TX.Tx.TimeBounds.MinTime), 10, 32)
-	exp, _ := strconv.ParseInt(string(t.TX.Tx.TimeBounds.MaxTime), 10, 32)
-	claims["jti"] = t.Hash("hex")
-	claims["sub"] = t.Address
-	claims["iat"] = iat
-	claims["exp"] = exp
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	tokenStr, err := token.SignedString([]byte(j.Secret))
 	if err != nil {
 		log.Fatalf("failed to sign jwt, err: %v", err)
