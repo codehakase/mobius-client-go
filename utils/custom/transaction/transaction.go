@@ -36,6 +36,8 @@ type Transaction struct {
 	envelopeRaw interface{}
 }
 
+// New creates a new Transaction from envelope
+// envelope can be either an xdr string or of type xdr.TransactionEnvelope
 func New(envelope interface{}) (*Transaction, error) {
 	var (
 		tx xdr.TransactionEnvelope
@@ -61,8 +63,20 @@ func (t *Transaction) Memo() xdr.Memo {
 	return t.Tx.Tx.Memo
 }
 
-// Sign signs the transaction with the given keypair
+// Sign signs the transaction with the given keypair ( *keypair.Full )
 func (t *Transaction) Sign(kps ...*keypair.Full) {
+	for _, kp := range kps {
+		h := t.Hash()
+		sig, err := kp.SignDecorated(h[:])
+		if err != nil {
+			log.Fatalf("failed to sign transaction, %v tx: %+v", err, t.Tx)
+		}
+		t.Tx.Signatures = append(t.Tx.Signatures, sig)
+	}
+}
+
+// SignKP signs the transaction with the given keypair ( *keypair.FromAddress )
+func (t *Transaction) SignKP(kps ...keypair.KP) {
 	for _, kp := range kps {
 		h := t.Hash()
 		sig, err := kp.SignDecorated(h[:])
