@@ -1,15 +1,15 @@
 package auth
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math"
 	"strconv"
-	"time"
 
 	mc "github.com/codehakase/mobius-client-go/client"
 	"github.com/codehakase/mobius-client-go/utils"
-	"github.com/stellar/go/build"
+	"github.com/codehakase/mobius-client-go/utils/custom/transaction"
 	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/xdr"
 )
@@ -17,26 +17,22 @@ import (
 // Token checks the challenge transaction signed by user on developer's side
 type Token struct {
 	DeveloperSecret string
-	TX              *xdr.TransactionEnvelope
-	TxProp          *build.TransactionBuilder
+	TX              *transaction.Transaction
 	Address         string // user public key
 	devKeypair      *keypair.Full
-	userKeypair     *keypair.Full
+	userKeypair     keypair.KP
 }
 
 // NewToken creates a new token handler with provided developer seed, xdr and user
 // address
 func NewToken(devSecret, xdrs, address string) (*Token, error) {
-	tx := &xdr.TransactionEnvelope{}
-	err := tx.Scan(xdrs)
+	tx, err := transaction.New(xdrs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to scan challenge transaction xdr, err: %v", err)
+		return nil, err
 	}
-	txp := &build.TransactionBuilder{TX: &tx.Tx}
 	return &Token{
 		devSecret,
 		tx,
-		txp,
 		address,
 		nil,
 		nil,
@@ -45,38 +41,37 @@ func NewToken(devSecret, xdrs, address string) (*Token, error) {
 
 // TimeBounds returns the time bounds for a given transaction
 func (t *Token) TimeBounds() *xdr.TimeBounds {
-	if t.TX.Tx.TimeBounds == nil {
+	timebounds := t.TX.Tx.Tx.TimeBounds
+	if timebounds == nil {
 		log.Fatalf("wrong challenge transaction structure")
 	}
-	return t.TX.Tx.TimeBounds
+	return timebounds
 }
 
 // Validate transaction signed by developer and user
-func (t *Token) Validate(strict bool) bool {
+func (t *Token) Validate(strict bool) (bool, error) {
 	if !t.signedCorrectly() {
-		log.Fatalf("wrong challenge transaction signature")
-		return false
+		return false, fmt.Errorf("wrong challenge transaction signature")
 	}
-	if !t.timeNowCovers(t.TX.Tx.TimeBounds) {
-		log.Fatalf("challenge transaction expired")
-		return false
+	if !t.timeNowCovers(t.TX.Tx.Tx.TimeBounds) {
+		return false, fmt.Errorf("challenge transaction expired")
 	}
-	if strict && t.tooOld(t.TX.Tx.TimeBounds) {
-		log.Fatalf("challenge transaction expired")
-		return false
+	if strict && t.tooOld(t.TX.Tx.Tx.TimeBounds) {
+		return false, fmt.Errorf("challenge transaction expired; too old")
 	}
-	return true
+	return true, nil
 }
 
 // Hash validates and returns the transaction hash
 func (t *Token) Hash(format string) interface{} {
-	_ = t.Validate(true)
-	if format == "binary" {
-		txHash, _ := t.TxProp.Hash()
-		return txHash[:]
+	if _, err := t.Validate(true); err != nil {
+		log.Fatal(err)
 	}
-	tHexHash, _ := t.TxProp.HashHex()
-	return tHexHash
+	hash := t.TX.Hash()
+	if format == "binary" {
+		return hash
+	}
+	return fmt.Sprintf("%s", hex.EncodeToString(hash[:]))
 }
 
 // Address returns the address a current token is issued for
@@ -102,39 +97,23 @@ func (t *Token) GetUserKeypair() *keypair.Full {
 // signedCorrectly confirms is the transaction is correctly signed by user and
 // developer
 func (t *Token) signedCorrectly() bool {
-	txt := build.TransactionBuilder{TX: &t.TX.Tx}
-	isSignedByDev := t.validate(t.GetKeypair(), t.TX, txt)
-	isSignedByUser := t.validate(t.GetUserKeypair(), t.TX, txt)
+	isSignedByDev := utils.ValidateTx(t.GetKeypair(), t.TX)
+	isSignedByUser := utils.ValidateTx(t.GetUserKeypair(), t.TX)
 	return isSignedByDev && isSignedByUser
-}
-
-func (t *Token) validate(kp *keypair.Full, tx *xdr.TransactionEnvelope, txt build.TransactionBuilder) bool {
-	if tx.Signatures == nil || len(tx.Signatures) < 1 {
-		return false
-	}
-	hash, err := txt.Hash()
-	if err != nil {
-		log.Fatalf("failed to retrieve transaction hash, err: %v", err)
-	}
-	for _, signature := range tx.Signatures {
-		if err := kp.Verify(hash[:], signature.Signature); err != nil {
-			return true
-		}
-	}
-	return false
 }
 
 // timeNowCovers returns true if current tie is within transaction time bounds
 func (t *Token) timeNowCovers(timeBounds *xdr.TimeBounds) bool {
-	now := math.Floor(float64(time.Now().UnixNano() / 1000))
-	nMinTime, _ := strconv.ParseInt(string(timeBounds.MinTime), 10, 32)
-	nMaxTime, _ := strconv.ParseInt(string(timeBounds.MaxTime), 10, 32)
-	return (now >= float64(nMinTime) && now <= float64(nMaxTime))
+	now := fmt.Sprintf("%.1f", math.Floor(float64(tsm()/1000)))
+	nMinTime := strconv.Itoa(int(timeBounds.MinTime))
+	nMaxTime := strconv.Itoa(int(timeBounds.MaxTime))
+	return (now >= nMinTime && now <= nMaxTime)
 }
 
 // tooOld returns true if transaction is created more than 10 seconds from now
 func (t *Token) tooOld(timeBounds *xdr.TimeBounds) bool {
-	now := math.Floor(float64(time.Now().UnixNano() / 1000))
-	nMinTime, _ := strconv.ParseInt((string(timeBounds.MinTime)), 10, 32)
-	return (now > float64(nMinTime+mc.StrictInterval))
+	now := fmt.Sprintf("%.1f", math.Floor(float64(tsm()/1000)))
+	nMinTime, _ := strconv.ParseInt(strconv.Itoa(int(timeBounds.MinTime)), 10, 64)
+	nMinTime = nMinTime + mc.StrictInterval
+	return (now > strconv.Itoa(int(nMinTime)))
 }
