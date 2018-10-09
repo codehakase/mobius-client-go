@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/ssoroka/ttime"
+
 	mc "github.com/codehakase/mobius-client-go/client"
 	"github.com/codehakase/mobius-client-go/utils"
 	"github.com/stellar/go/build"
@@ -16,11 +18,11 @@ import (
 var Network build.Network
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	rand.Seed(ttime.Now().UnixNano())
 	if os.Getenv("MOBIUS_NETWORK") == "" {
-		Network = build.Network{network.TestNetworkPassphrase}
+		Network = build.Network{Passphrase: network.TestNetworkPassphrase}
 	} else if os.Getenv("MOBIUS_NETWORK") == "public" {
-		Network = build.Network{network.PublicNetworkPassphrase}
+		Network = build.Network{Passphrase: network.PublicNetworkPassphrase}
 	}
 }
 
@@ -73,7 +75,11 @@ func (c *Challenge) buildTimeBounds(exp int64) build.Timebounds {
 		exp = mc.ChallengeExpiresIn
 	}
 	return build.Timebounds{
-		MinTime: uint64(math.Floor(float64(time.Now().UnixNano() / 1000))),
-		MaxTime: uint64(math.Floor(float64(time.Now().UnixNano()/1000 + exp))),
+		MinTime: uint64(math.Floor(float64(tsm() / 1000))),
+		MaxTime: uint64(math.Floor(float64(tsm()/1000 + exp))),
 	}
+}
+
+func tsm() int64 {
+	return ttime.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 }
