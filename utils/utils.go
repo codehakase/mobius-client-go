@@ -1,26 +1,31 @@
 package utils
 
 import (
-	"crypto/sha256"
 	"log"
 	"os"
 
-	"github.com/stellar/go/build"
+	"github.com/codehakase/mobius-client-go/utils/custom/transaction"
 	"github.com/stellar/go/keypair"
-	"github.com/stellar/go/xdr"
 )
 
 func KPFromSeed(seed string) *keypair.Full {
-	keypairHash := sha256.Sum256([]byte(seed))
-	kp, err := keypair.FromRawSeed(keypairHash)
+	kp, err := keypair.Parse(seed)
 	if err != nil {
 		log.Fatalf("failed to create keypair from developer secret key, err: %v", err)
 		os.Exit(1)
 	}
-	return kp
+	switch kp.(type) {
+	case *keypair.Full:
+		return kp.(*keypair.Full)
+	case *keypair.FromAddress:
+		return new(keypair.Full)
+	}
+	log.Fatalf("failed to create keypair from developer secret key, err: %v", err)
+	os.Exit(1)
+	return nil
 }
 
-func KPFromAddress(address string) *keypair.Full {
+func KPFromAddress(address string) keypair.KP {
 	if address == "" {
 		log.Fatalf("failed to create keypair from user's public address")
 		os.Exit(1)
@@ -30,18 +35,15 @@ func KPFromAddress(address string) *keypair.Full {
 		log.Fatalf("failed to create keypair from user's public address, err: %v", err)
 		os.Exit(1)
 	}
-	return kp.(*keypair.Full)
+	return kp
 }
 
-func ValidateTx(devKeypair *keypair.Full, tx *xdr.TransactionEnvelope, t *build.TransactionBuilder) bool {
-	if tx.Signatures == nil || len(tx.Signatures) < 1 {
+func ValidateTx(devKeypair keypair.KP, tx *transaction.Transaction) bool {
+	if tx.Tx.Signatures == nil || len(tx.Tx.Signatures) < 1 {
 		return false
 	}
-	hash, err := t.Hash()
-	if err != nil {
-		log.Fatalf("failed to retrieve transaction hash, err: %v", err)
-	}
-	for _, signature := range tx.Signatures {
+	hash := tx.Hash()
+	for _, signature := range tx.Tx.Signatures {
 		if err := devKeypair.Verify(hash[:], signature.Signature); err != nil {
 			return true
 		}
