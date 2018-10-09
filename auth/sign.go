@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"bytes"
+	"encoding/base64"
 	"log"
 
 	"github.com/codehakase/mobius-client-go/utils"
-	"github.com/stellar/go/build"
+	"github.com/codehakase/mobius-client-go/utils/custom/transaction"
 	"github.com/stellar/go/xdr"
 )
 
@@ -13,25 +15,21 @@ type Sign struct{}
 
 // Sign adds a signature to the given transaction
 func (s *Sign) Call(userSecret, xdrs, address string) string {
-	tx := &xdr.TransactionEnvelope{}
-	err := tx.Scan(xdrs)
+	tx, err := transaction.New(xdrs)
 	if err != nil {
-		log.Fatalf("failed to scan challenge transaction xdr, err: %v", err)
+		log.Fatal(err)
 	}
 	kp := utils.KPFromSeed(userSecret)
 	devKeypair := utils.KPFromAddress(address)
 	if err != nil {
 		log.Fatalf("failed to parse dev key pair, err: %v", err)
 	}
-	txt := &build.TransactionBuilder{TX: &tx.Tx}
-	_ = utils.ValidateTx(devKeypair, tx, txt)
-	txe, err := txt.Sign(kp.Seed())
+	_ = utils.ValidateTx(devKeypair, tx)
+	tx.Sign(kp)
+	var txBytes bytes.Buffer
+	_, err = xdr.Marshal(&txBytes, tx.Tx)
 	if err != nil {
-		log.Fatalf("failed to sign challenge transaction, err: %v", err)
+		log.Fatalf("marshal xdr failed, %v", err)
 	}
-	txtEnvelopeStr, err := txe.Base64()
-	if err != nil {
-		log.Fatalf("failed to generate txt envelope str, err: %v", err)
-	}
-	return txtEnvelopeStr
+	return base64.StdEncoding.EncodeToString(txBytes.Bytes())
 }
