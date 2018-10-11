@@ -15,14 +15,14 @@ import (
 // Network
 type Account struct {
 	Account        horizon.Account
-	Keypair        *keypair.Full
+	Keypair        keypair.KP
 	AssetIssuers   []string
 	ClientInstance *horizon.Client
 }
 
 // Build fetches information from the Stellar Network and returns an instance of
 // Account
-func Build(kp *keypair.Full) (*Account, error) {
+func Build(kp keypair.KP) (*Account, error) {
 	accountID := kp.Address()
 	account, err := mc.NewClient().HorizonClient.LoadAccount(accountID)
 	if err != nil {
@@ -37,13 +37,13 @@ func Build(kp *keypair.Full) (*Account, error) {
 }
 
 // GetKeypair returns the keypair for account
-func (a *Account) GetKeypair() *keypair.Full { return a.Keypair }
+func (a *Account) GetKeypair() keypair.KP { return a.Keypair }
 
 // Info returns the Account information
 func (a *Account) Info() horizon.Account { return a.Account }
 
 // Authorized confirms if the given keypair is added as a cosigner to account
-func (a *Account) Authorized(kp *keypair.Full) bool {
+func (a *Account) Authorized(kp keypair.KP) bool {
 	signer := a.findSigner(kp.Address())
 	if (hp.Signer{}) == signer {
 		return false

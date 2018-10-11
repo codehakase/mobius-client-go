@@ -15,12 +15,13 @@ func (ct *CreateTrustline) Call(kp *keypair.Full, asset build.Asset) (horizon.Tr
 	client := mc.NewClient().HorizonClient
 	account, err := Build(kp)
 	// create transaction
-	tx, err := ct.tx(account, asset)
+	tx, err := ct.tx(account, asset, kp)
 	if err != nil {
 		return ts, err
 	}
 	// sign transaciton
-	txe, err := tx.Sign(account.Keypair.Seed())
+	akp := account.Keypair.(*keypair.Full)
+	txe, err := tx.Sign(akp.Seed())
 	if err != nil {
 		return ts, err
 	}
@@ -31,8 +32,9 @@ func (ct *CreateTrustline) Call(kp *keypair.Full, asset build.Asset) (horizon.Tr
 	return client.SubmitTransaction(txtEnvelopeStr)
 }
 
-func (ct *CreateTrustline) tx(account *Account, asset build.Asset) (*build.TransactionBuilder, error) {
+func (ct *CreateTrustline) tx(account *Account, asset build.Asset, kp *keypair.Full) (*build.TransactionBuilder, error) {
 	tx, err := build.Transaction(
+		build.SourceAccount{AddressOrSeed: kp.Address()},
 		build.ChangeTrust(asset),
 	)
 	if err != nil {

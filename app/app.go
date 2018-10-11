@@ -28,7 +28,7 @@ func Build(developerSecret, address string) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	userKeypair := utils.KPFromSeed(address)
+	userKeypair := utils.KPFromAddress(address)
 	userAccount, err := blockchain.Build(userKeypair)
 	if err != nil {
 		return nil, err
@@ -67,10 +67,10 @@ func (a *App) UserBalance() float64 {
 }
 
 // AppKeypair returns keypair associated with app account
-func (a *App) AppKeypair() *keypair.Full { return a.AppAccount.GetKeypair() }
+func (a *App) AppKeypair() keypair.KP { return a.AppAccount.GetKeypair() }
 
 // UserKeypair returns keypair associated with connected user
-func (a *App) UserKeypair() *keypair.Full { return a.UserAccount.GetKeypair() }
+func (a *App) UserKeypair() keypair.KP { return a.UserAccount.GetKeypair() }
 
 // Charge charges specified amount from user account and then optionally
 // transfers it from app account to a thrid party in same transaction
@@ -115,13 +115,15 @@ func (a *App) Transfer(amount float64, destination string) (horizon.TransactionS
 func (a *App) submitTx(paymentOps build.PaymentBuilder) (horizon.TransactionSuccess, error) {
 	var hts horizon.TransactionSuccess
 	tx, err := build.Transaction(
+		build.SourceAccount{AddressOrSeed: a.UserKeypair().Address()},
 		paymentOps,
 	)
 	if err != nil {
 		return hts, fmt.Errorf("failed to build transaction, err: %v", err)
 	}
 	// sign transaction
-	txe, err := tx.Sign(a.AppKeypair().Seed())
+	akp := a.AppKeypair().(*keypair.Full)
+	txe, err := tx.Sign(akp.Seed())
 	if err != nil {
 		return hts, fmt.Errorf("failed to sign transaction, err: %v", err)
 	}

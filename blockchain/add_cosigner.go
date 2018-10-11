@@ -20,7 +20,8 @@ func (c *Cosigner) Call(kp, cosignerKeypair *keypair.Full, weight int) (horizon.
 		return ts, err
 	}
 	// sign transaciton
-	txe, err := tx.Sign(account.Keypair.Address())
+	akp := account.Keypair.(*keypair.Full)
+	txe, err := tx.Sign(akp.Seed())
 	if err != nil {
 		return ts, err
 	}
