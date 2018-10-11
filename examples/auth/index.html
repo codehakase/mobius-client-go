@@ -1,0 +1,100 @@
+<!Doctype html>
+<html>
+<head>
+  <style>
+    .field { margin-top: 0.5em; }
+    label { width: 500px; display: block; }
+    input, textarea { width: 500px; }
+  </style>
+</head>
+<body>
+  <h1>Authorize application</h1>
+
+  <div class="field">
+    <label for="appPublicKey">Application Public Key</label>
+    <input type="text" disabled="disabled"
+		value="GAZPVDWNZQWQTIFO7FNSOJG5C4ZVPMU6HUGGCOGSRVJTJTYBN3CO6LIS" id="appPublicKey">
+  </div>
+
+  <h2>Stage 1: Request Challenge</h2>
+  <div class="field">
+	<textarea id="challenge_xdr" disabled="disabled" rows="10"></textarea>
+  </div>
+  <div class="field">
+		<input type="button" value="Request challenge" id="challenge">
+  </div>
+
+  <h2>Stage 2: Sign Challenge</h2>
+  <form>
+    <div class="field">
+      <label for="public_key">Public Key:</label>
+      <input type="text" id="public_key">
+    </div>
+    <div class="field">
+      <label for="secret">Private Key:</label>
+      <input type="text" id="secret">
+    </div>
+    <div class="field">
+      <input type="button" value="Sign and send challenge" id="sign">
+    </div>
+
+    <h3 id="result">None</h3>
+  </form>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/0.8.0/stellar-sdk.js"></script>
+	<script src="mobius-client.min.js"></script>
+	<script>
+		$(function() {
+			var xdr = null;
+			var signedXDR = null;
+			var keypair = StellarSdk.Keypair.random();
+			var appPublicKey = $("#appPublicKey").val();
+
+			StellarSdk.Network.useTestNetwork();
+
+			$("#public_key").val(keypair.publicKey());
+			$("#secret").val(keypair.secret());
+
+			$("#challenge").on("click", () => {
+				axios
+					.get("/auth")
+					.then(response => {
+						xdr = response.data;
+						$("#challenge_xdr").val(xdr);
+					})
+					.catch(err => {
+						$("#result").html(err.message);
+					});
+			});
+			$("#sign").on("click", () => {
+	console.log('xdr ', xdr);
+				signedXDR = MobiusClient.Auth.Sign.call(
+					keypair.secret(),
+					xdr,
+					appPublicKey
+				);
+	console.log('signedXDR: ', signedXDR);
+				$("#signed_challenge_xdr").val(signedXDR);
+
+				axios({
+					url: "/auth",
+					method: "post",
+					params: {
+						xdr: signedXDR,
+						public_key: keypair.publicKey()
+					}
+				})
+					.then(response => {
+						$("#result").html(response.data);
+					})
+					.catch(err => {
+						$("#result").html(err.message);
+					});
+			});
+		});	
+	</script>
+
+</body>
+
+</html>

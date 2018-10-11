@@ -1,0 +1,143 @@
+
+<html>
+  <head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.1/semantic.min.css">
+    <style>
+      .ui.container {
+        margin: 2em 0em;
+      }
+
+      .ui.container > h1 {
+        font-size: 3em;
+      }
+
+      .ui.container > h2.dividing.header {
+        font-size: 2em;
+        font-weight: normal;
+        margin: 2em 0em 1em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ui container">
+      <h1>Mobius Wallet App Dev Auth</h1>
+
+      <h2 class="ui dividing header">Application</h2>
+
+      <form class="ui form">
+        <div class="field">
+          <label>Auth endpoint:</label>
+          <input type="text" value="http://localhost:3000/auth" id="url"></input>
+        </div>
+        <div class="field">
+          <label>Redirect URI:</label>
+          <input type="text" value="http://localhost:3000/play" id="redirect_url"></input>
+        </div>
+        <div class="field">
+          <label>Public Key:</label>
+          <input type="text" id="pubKey" value="GCYAXCSAW3V5SM6DXP6GTGIRIOR5ML4VA4FXBR2WOGGJQTVVYAEC3O5H"></input>
+        </div>
+        <div class="field">
+          <label>Private Key:</label>
+          <input type="text" value="SDD66T36YOVU34NP5QDLVSQQBW6W43E4Z6NOOA5RHXP5U2J6WCAEPI2T"></input>
+        </div>
+      </form>
+
+      
+
+      <h2 class="ui dividing header">Normal Account</h2>
+
+      <form class="ui form">
+        <div class="field">
+          <input type="text" value="GCRX2GYXP3OLI6QKEYSHO3ZCDWSH7AGROHE2G3V537EMY5KS6YUXCHDV" />
+        </div>
+        <div class="field">
+          <input type="text" value="SDBLMH7FJPFZ3J5MMCUE6KASH3DQIWEZP3OUWM723JWMKM37XS7Y7YKH" class="seed" />
+        </div>
+        <div class="field">
+          <input type="submit" class="ui button green" value="Open" />
+        </div>
+      </form>
+
+      
+
+      <h2 class="ui dividing header">Zero Balance Account</h2>
+
+      <form class="ui form">
+        <div class="field">
+          <input type="text" value="GBNKYS2TKEARAZLFWLQ6LD4KXMOUNPFTFKF3F33V6CZZUFBG4HQBI4WV" />
+        </div>
+        <div class="field">
+          <input type="text" value="SBXEPT7XUE5X4I6PSXBD2XT77J2ZZGYN6S4PFJPJQ5NCH4EDMBKMZJFB" class="seed" />
+        </div>
+        <div class="field">
+          <input type="submit" class="ui button green" value="Open" />
+        </div>
+      </form>
+
+      
+
+      <h2 class="ui dividing header">Unauthorized Account</h2>
+
+      <form class="ui form">
+        <div class="field">
+          <input type="text" value="GALQLPWOSMUU42XZMHIL4XVZSWXFT5B56ZYRRD2EV5C24STJAZ3FBMFB" />
+        </div>
+        <div class="field">
+          <input type="text" value="SAMOFV6DPEFI3EMJEY4C46Y4RK5KPZDDVZSKZWLP5NN5QKYQFSHN3QG7" class="seed" />
+        </div>
+        <div class="field">
+          <input type="submit" class="ui button green" value="Open" />
+        </div>
+      </form>
+
+      
+    </div>
+  </body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/0.8.0/stellar-sdk.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.1/semantic.min.js"></script>
+  <script src="./mobius-client.min.js"></script>
+  <script>
+ StellarSdk.Network.useTestNetwork()
+
+    $(function() {
+      $(".ui.button").on('click', function(e) {
+        e.preventDefault();
+        var seed = $(e.target).closest('.ui.form').find('.seed:first').val();
+        var keypair = StellarSdk.Keypair.fromSecret(seed);
+        var endpoint = $('#url').val();
+        var appPubKey = $('#pubKey').val();
+        console.log("seed: ",seed,"kp: ",keypair,"appPubKey: ",appPubKey);
+        var showError = function(err) {
+          if (err) {
+            alert(err);
+          }
+        }
+
+        axios.get(endpoint).then(function(response) {
+          var xdr = response.data
+          var signedXDR = MobiusClient.Auth.Sign.call(
+            seed,
+            xdr,
+            appPubKey
+          );
+          console.log('signedXDR: ', signedXDR);
+          axios({
+            url: endpoint,
+            method: 'post',
+            params: {
+              xdr: signedXDR,
+              public_key: keypair.publicKey()
+            }
+          }).then(function(response) {
+            var url = $('#redirect_url').val();
+            // document.location = url;
+            document.location = url + '?token=' + response.data;
+          }).catch(showError);
+        }).catch(showError);
+      });
+    });
+  </script>
+</html>
