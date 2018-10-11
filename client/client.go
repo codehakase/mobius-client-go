@@ -1,6 +1,8 @@
 package client
 
 import (
+	"os"
+
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
 )
@@ -40,7 +42,12 @@ func NewClient() *Client {
 		AssetCode:          "MOBI",
 		HorizonClient:      nil,
 	}
-	client.Network = &build.TestNetwork
+	if os.Getenv("MOBIUS_NETWORK") == "test" {
+		client.Network = &build.TestNetwork
+	} else if os.Getenv("MOBIUS_NETWORK") == "public" {
+		client.Network = &build.PublicNetwork
+	}
+	_ = client.GetHorizonClient()
 	return client
 }
 
@@ -65,7 +72,7 @@ func (c *Client) GetMobiusHost() string {
 
 // GetStellarAsset returns an instance of the asset used for payments
 func (c *Client) GetStellarAsset() build.Asset {
-	if (build.Asset{}) == c.StellarAsset {
+	if (build.Asset{}) != c.StellarAsset {
 		return c.StellarAsset
 	}
 	stellarAsset := build.CreditAsset(c.AssetCode, c.GetAssetIssuer())
@@ -75,9 +82,6 @@ func (c *Client) GetStellarAsset() build.Asset {
 
 // GetHorizonClient returns a StellarHorizon Server instance
 func (c *Client) GetHorizonClient() *horizon.Client {
-	if c.HorizonClient != nil {
-		return c.HorizonClient
-	}
 	if c.Network.Passphrase == build.PublicNetwork.Passphrase {
 		c.HorizonClient = horizon.DefaultPublicNetClient
 		return c.HorizonClient

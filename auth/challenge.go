@@ -19,7 +19,7 @@ var Network build.Network
 
 func init() {
 	rand.Seed(ttime.Now().UnixNano())
-	if os.Getenv("MOBIUS_NETWORK") == "" {
+	if os.Getenv("MOBIUS_NETWORK") == "test" {
 		Network = build.Network{Passphrase: network.TestNetworkPassphrase}
 	} else if os.Getenv("MOBIUS_NETWORK") == "public" {
 		Network = build.Network{Passphrase: network.PublicNetworkPassphrase}
