@@ -83,7 +83,7 @@ func main() {
 	// Generates and returns challenge transaction XDR signed by application to user
 	r.HandleFunc("/auth", func (w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json;charset=utf-8")
-		chl := &MobiusAuth.Challenge{}
+		chl := new(MobiusAuth.Challenge)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte((chl.Call(APPLICATION_SECRET_KEY, 0))))
 	}).Methods("GET")
@@ -92,35 +92,39 @@ func main() {
 	// Validates challenge transaction. It must be:
 	//  - Signed by application and requesting user.
 	//  - Not older than 10 seconds from now (see MobiusClient.Client.strictInterval`)
-	type challengeReq struct{
-		xdr       string `json:"xdr"`
-		publicKey string `json:"public_key"`
-	}
-	r.HandleFunc("/auth", func (w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json;charset=utf-8")
-		var chreq challengeReq
-		_ = json.NewDecoder(r.Body).Decode(&chreq) // handle errors
 		token, err := MobiusAuth.NewToken(
 			APPLICATION_SECRET_KEY,
-			chreq.xdr,
-			chreq.publicKey,
+			r.FormValue("xdr"),
+			r.FormValue("public_key"),
 		)
 		if err != nil {
-			http.Error(w, err, 500)
+			http.Error(w, err.Error(), 500)
 		}
 		// Important! Otherwise, token will be considered valid
-		_ = token.Validate(true)
+		if _, err := token.Validate(true); err != nil {
+			log.Fatal(err)
+		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(token.Hash("hex").([]byte)))
+		h := token.Hash("hex").(string)
+		w.Write([]byte(h))
 	}).Methods("POST")
 
 	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
+		AllowedOrigins:   []string{"*"},
 		AllowCredentials: true,
 		AllowedHeaders: []string{"Origin", "X-Requested-With", "Content-Type",
-		"Accept"},
+			"Accept"},
 	})
+	r.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./"))))
 	handler := c.Handler(r)
+	log.Println("Starting app server...")
 	log.Fatal(http.ListenAndServe(":3000", handler))
 }
 ```
@@ -137,6 +141,77 @@ parameter. Upon opening the website/loading the application it checks that the
 token is valid (within time bounds etc) and the account in the token has added
 the app as a signer so it can withdraw MOBI from it.
 
+> See demo at `examples/flappy`
+
+### Sample Server Implementation
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+
+	"github.com/codehakase/mobius-client-go/app"
+	"github.com/codehakase/mobius-client-go/auth"
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
+)
+
+var APP_KEY string
+
+func init() {
+	APP_KEY = os.Getenv("APPLICATION_SECRET_KEY")
+}
+
+func main() {
+	r := mux.NewRouter()
+	
+	r.HandleFunc("/pay", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json;charset=utf-8")
+			publicKey := getPublicKeyFromToken(r.URL.Query().Get("token"))
+			err := r.ParseForm()
+			if err != nil {
+				log.Fatalf("failed to parse request, %v", err)
+			}
+			var amount float64
+			if r.FormValue("amount") != "" {
+				amount, _ = strconv.ParseFloat(r.FormValue("amount"), 64)
+			} else {
+				amount = 1
+			}
+			dapp, err := app.Build(APP_KEY, publicKey)
+			if err != nil {
+				log.Fatal(err)
+			}
+			res, err := dapp.Charge(amount)
+			if err != nil {
+				log.Fatal(err)
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(fmt.Sprintf(
+				"{'status': 'ok','tx_hash': '%s','balance': %v}",
+				res.Hash,
+				dapp.UserBalance(),
+			)))
+		}).Methods("POST")
+}
+
+func getPublicKeyFromToken(token string) string {
+	if token == "" {
+		log.Fatal("token is sent empty")
+		os.Exit(1)
+	}
+	j := &auth.JWT{Secret: APP_KEY}
+	jwtToken := j.Decode(token)
+	return jwtToken.Claims.(jwt.MapClaims)["sub"].(string)
+}
+```
+
+
 ## Development
 ```shell
 # Clone this repo
@@ -149,11 +224,11 @@ $ dep ensure -v
 
 # Run authentication example
 
-$ make example:auth
+$ make example:auth # will boot http server @ http://localhost:3000
 
 # Run Tests
 
-$ go test ./...
+$ make test # or make test-verbose
 ```
 
 ## Contributing
