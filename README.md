@@ -1,5 +1,3 @@
-# mobius-client-go
-
 # Mobius DApp Store Go SDK
 
 The Mobius DApp Store JS SDK makes it easy to integrate Mobius DApp Store MOBI payments into any Go application.
