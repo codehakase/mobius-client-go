@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/codehakase/mobius-client-go.svg?branch=master)](https://travis-ci.org/polds/logrus-papertrail-hook)&nbsp;[![godoc reference](https://godoc.org/github.com/codehakase/mobius-client-go?status.png)](https://godoc.org/github.com/codehakase/mobius-client-go)
+
 # Mobius DApp Store Go SDK
 
 The Mobius DApp Store JS SDK makes it easy to integrate Mobius DApp Store MOBI payments into any Go application.
