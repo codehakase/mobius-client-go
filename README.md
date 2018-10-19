@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/codehakase/mobius-client-go.svg?branch=master)](https://travis-ci.org/polds/logrus-papertrail-hook)&nbsp;[![godoc reference](https://godoc.org/github.com/codehakase/mobius-client-go?status.png)](https://godoc.org/github.com/codehakase/mobius-client-go)
+[![Build Status](https://travis-ci.org/codehakase/mobius-client-go.svg?branch=master)](https://travis-ci.org/codehakase/mobius-client-go)&nbsp;[![godoc reference](https://godoc.org/github.com/codehakase/mobius-client-go?status.png)](https://godoc.org/github.com/codehakase/mobius-client-go)
 
 # Mobius DApp Store Go SDK
 
